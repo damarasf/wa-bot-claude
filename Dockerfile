@@ -6,22 +6,24 @@ WORKDIR /app
 
 # Install system dependencies for Puppeteer
 # Install Chromium and other dependencies
-RUN apt-get update && apt-get install -y chromium
-
-# Install system dependencies (for Chromium)
-RUN apk add --no-cache \
-    udev \
-    ttf-freefont \
+RUN apt-get update && apt-get install -y \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    nodejs \
-    yarn \
-    python3 \
-    make \
-    g++
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libgdk-pixbuf2.0-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    --no-install-recommends
 
 # Install PostgreSQL client for backup/migration scripts
 RUN apk add --no-cache postgresql-client
