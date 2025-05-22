@@ -4,6 +4,10 @@ FROM node:18-slim
 # Set working directory
 WORKDIR /app
 
+# Install system dependencies for Puppeteer
+# Install Chromium and other dependencies
+RUN apt-get update && apt-get install -y chromium
+
 # Install system dependencies (for Chromium)
 RUN apk add --no-cache \
     udev \
