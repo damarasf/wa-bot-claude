@@ -30,28 +30,41 @@ const register = async (client, message) => {
     displayName = sender.pushname || 'User';
   }
   
-  // Check if this is an admin registration (optional parameter)
-  const arg = message.body.trim().split(' ');
+  // Check if this user is the owner from environment
+  const ownerNumber = process.env.OWNER_PHONE_NUMBER || '';
+  const isOwner = phoneNumber === ownerNumber;
   let isAdmin = false;
-  
-  if (arg.length > 1 && arg[1].toLowerCase() === 'admin') {
-    // Get admin password from environment
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  let isPremium = false;
+    // If owner is registering, automatically make them admin and premium
+  if (isOwner) {
+    isAdmin = true;
+    isPremium = true;
+    logger.log('info', `Owner registration detected: ${phoneNumber}`);
+  } else {
+    // If not owner, check for regular admin registration
+    const arg = message.body.trim().split(' ');
     
-    // Check if admin password is provided and correct
-    if (arg.length > 2 && arg[2] === adminPassword) {
-      isAdmin = true;
-    } else {
-      await client.reply(
-        message.from,
-        formatter.error(
-          'Admin Registration Failed', 
-          'Invalid admin password. Please try again with correct password.'
-        ),
-        message.id
-      );
-      logger.logCommand(phoneNumber, 'register', false, 'Invalid admin password');
-      return;
+    if (arg.length > 1 && arg[1].toLowerCase() === 'admin') {
+      // Get admin password from environment
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+      
+      // Check if admin password is provided and correct
+      if (arg.length > 2 && arg[2] === adminPassword) {
+        isAdmin = true;
+        isPremium = true; // Make admin automatically premium
+        logger.log('info', `Admin registration with premium status: ${phoneNumber}`);
+      } else {
+        await client.reply(
+          message.from,
+          formatter.error(
+            'Admin Registration Failed', 
+            'Invalid admin password. Please try again with correct password.'
+          ),
+          message.id
+        );
+        logger.logCommand(phoneNumber, 'register', false, 'Invalid admin password');
+        return;
+      }
     }
   }
     // Check if user is already registered
@@ -69,18 +82,24 @@ const register = async (client, message) => {
     logger.logCommand(phoneNumber, 'register', false, 'User already registered');
     return;
   }
-  
-  // Register the user
-  const result = await userHandler.registerUser(phoneNumber, isAdmin);
+    // Register the user
+  const result = await userHandler.registerUser(phoneNumber, isAdmin, isPremium);
     if (result.success) {
     const responseInfo = {
       'Phone': phoneNumber,
       'Welcome': 'You can now use all bot features!'
     };
     
-    // Add admin status to response if user is an admin
-    if (isAdmin) {
+    // Add roles to response
+    if (isOwner) {
+      responseInfo['Role'] = 'Owner';
+      responseInfo['Status'] = 'Premium';
+    } else if (isAdmin) {
       responseInfo['Role'] = 'Administrator';
+    }
+    
+    if (isPremium && !isOwner) {
+      responseInfo['Status'] = 'Premium';
     }
     
     await client.reply(
@@ -190,12 +209,15 @@ const help = async (client, message) => {  const generalCommands = [
     'n8n deactivate - Deactivate N8N Integration',
     'n8n status - Check N8N Integration status'
   ];
-  
-  const adminCommands = [
+    const adminCommands = [
     'admin stats - Show bot statistics',
     'admin broadcast [message] - Send message to all users',
     'admin restart - Restart the bot',
     'n8n premium [phone] - Upgrade user to premium N8N Integration'
+  ];
+  
+  const ownerCommands = [
+    'admin makeadmin [phone] - Make a user an admin (owner only)'
   ];
   
   let helpText = formatter.info('WhatsApp Bot Commands', '');
@@ -216,12 +238,17 @@ const help = async (client, message) => {  const generalCommands = [
   helpText += '\n\n';
   
   helpText += formatter.list('🔌 N8N Integration', n8nCommands, false);
-  
-  // Check if the user is an admin
+    // Check if the user is an admin
   const adminHandler = require('./adminCommands');
   const phoneNumber = message.sender.id.split('@')[0];
+  const isOwnerUser = phoneNumber === require('../config/config').owner.phoneNumber;
   
-  if (adminHandler.isAdmin(phoneNumber)) {
+  if (isOwnerUser) {
+    helpText += '\n\n';
+    helpText += formatter.list('👑 Admin Commands', adminCommands, false);
+    helpText += '\n\n';
+    helpText += formatter.list('🔐 Owner Commands', ownerCommands, false);
+  } else if (await adminHandler.isAdmin(phoneNumber)) {
     helpText += '\n\n';
     helpText += formatter.list('👑 Admin Commands', adminCommands, false);
   }

@@ -4,9 +4,10 @@ const db = require('../models');
  * Handler for user registration
  * @param {string} phoneNumber - The phone number for registration (including country code)
  * @param {boolean} isAdmin - Whether the user is an admin
+ * @param {boolean} isPremium - Whether the user is a premium user
  * @returns {Promise<Object>} - Created user object or error message
  */
-const registerUser = async (phoneNumber, isAdmin = false) => {
+const registerUser = async (phoneNumber, isAdmin = false, isPremium = false) => {
   try {
     // Check if user with this phone number already exists
     const existingUser = await db.User.findOne({ 
@@ -21,17 +22,19 @@ const registerUser = async (phoneNumber, isAdmin = false) => {
       };
     }
     
-    // Create user with just the phone number
+    // Create user with provided roles
     const user = await db.User.create({
       phoneNumber,
-      isAdmin
+      isAdmin,
+      isPremium
     });    return {
       success: true,
       message: 'Registration successful',
       user: {
         id: user.id,
         phoneNumber: user.phoneNumber,
-        isAdmin: user.isAdmin
+        isAdmin: user.isAdmin,
+        isPremium: user.isPremium
       }
     };
   } catch (error) {

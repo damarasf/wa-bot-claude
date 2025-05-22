@@ -75,10 +75,12 @@ const logCommand = (phoneNumber, command, success, error = null) => {
  * Log authentication attempts
  * @param {string} phoneNumber - User's phone number
  * @param {boolean} success - Whether authentication was successful
+ * @param {string} [note] - Optional additional note about authentication
  */
-const logAuth = (phoneNumber, success) => {
+const logAuth = (phoneNumber, success, note = '') => {
   const status = success ? 'SUCCESS' : 'FAILED';
-  const message = `[AUTH] [${status}] User ${phoneNumber}`;
+  const noteStr = note ? ` (${note})` : '';
+  const message = `[AUTH] [${status}] User ${phoneNumber}${noteStr}`;
   
   writeToLog(authLogFile, message);
 };

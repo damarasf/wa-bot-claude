@@ -15,6 +15,11 @@ const config = {
     dialect: process.env.DB_DIALECT || 'postgres',
   },
   
+  // Owner configuration
+  owner: {
+    phoneNumber: process.env.OWNER_PHONE_NUMBER || '',
+  },
+  
   // N8N integration configuration
   n8n: {
     apiUrl: process.env.N8N_API_URL || 'http://localhost:5678/webhook/whatsapp',

@@ -291,15 +291,18 @@ const messageHandler = async (client, message) => {  try {
             case 'broadcast':
               await adminCommands.broadcast(client, message);
               break;
-              
-            case 'restart':
+                case 'restart':
               await adminCommands.restart(client, message);
+              break;
+            
+            case 'makeadmin':
+              await adminCommands.makeAdmin(client, message);
               break;
               
             default:
               await client.reply(
                 from,
-                '❌ Unknown admin command. Available commands: stats, broadcast, restart',
+                '❌ Unknown admin command. Available commands: stats, broadcast, restart, makeadmin',
                 id
               );
               break;

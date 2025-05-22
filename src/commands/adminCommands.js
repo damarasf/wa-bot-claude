@@ -1,6 +1,6 @@
 /**
  * Admin Commands Module
- * Contains commands that can only be executed by admins
+ * Contains commands that can only be executed by admins or the owner
  */
 
 const config = require('../config/config');
@@ -10,15 +10,29 @@ const chat = require('../utils/chat');
 const { sequelize } = require('../models');
 
 /**
+ * Check if a user is the owner
+ * @param {string} phoneNumber - User's phone number
+ * @returns {boolean} - True if owner, false otherwise
+ */
+const isOwner = (phoneNumber) => {
+  return phoneNumber === config.owner.phoneNumber;
+};
+
+/**
  * Check if a user is an admin
  * @param {Object|string} user - User object or phone number
- * @returns {Promise<boolean>} - True if admin, false otherwise
+ * @returns {Promise<boolean>} - True if admin or owner, false otherwise
  */
 const isAdmin = async (user) => {
   // If passed a phone number string instead of a user object
   if (typeof user === 'string') {
     const { sequelize } = require('../models');
     const phoneNumber = user;
+    
+    // First check if user is the owner (from env)
+    if (isOwner(phoneNumber)) {
+      return true;
+    }
     
     // Look up the user in the database
     const userRecord = await sequelize.models.User.findOne({ 
@@ -30,7 +44,14 @@ const isAdmin = async (user) => {
   }
   
   // If passed a user object directly
-  return user ? user.isAdmin : false;
+  if (!user) return false;
+  
+  // Check if user is owner
+  if (isOwner(user.phoneNumber)) {
+    return true;
+  }
+  
+  return user.isAdmin;
 };
 
 /**
@@ -221,9 +242,92 @@ const restart = async (client, message) => {
   }
 };
 
+/**
+ * Make a user an admin (owner only)
+ * @param {Object} client - The WhatsApp client instance
+ * @param {Object} message - The message object
+ */
+const makeAdmin = async (client, message) => {
+  try {
+    // Get phone number of message sender
+    const senderPhoneNumber = message.sender.id.split('@')[0];
+    
+    // Check if the sender is the owner
+    if (!isOwner(senderPhoneNumber)) {
+      await client.reply(
+        message.from,
+        formatter.error('Access Denied', 'This command is only available to the owner.'),
+        message.id
+      );
+      logger.logCommand(senderPhoneNumber, 'admin.makeAdmin', false, 'Not the owner');
+      return;
+    }
+    
+    // Get arguments from command
+    const args = message.body.split(' ');
+    if (args.length < 2) {
+      await client.reply(
+        message.from,
+        formatter.error('Invalid Command', 'Please provide a phone number to make admin.\nUsage: !makeadmin <phone_number>'),
+        message.id
+      );
+      logger.logCommand(senderPhoneNumber, 'admin.makeAdmin', false, 'Missing phone number argument');
+      return;
+    }
+    
+    // Get the target phone number, remove any non-digit characters
+    let targetPhoneNumber = args[1].replace(/\D/g, '');
+    
+    // Ensure the phone number starts with the country code
+    if (!targetPhoneNumber.startsWith('62') && targetPhoneNumber.startsWith('0')) {
+      targetPhoneNumber = '62' + targetPhoneNumber.slice(1);
+    }
+    
+    // First, check if user exists in database
+    let user = await sequelize.models.User.findOne({
+      where: { phoneNumber: targetPhoneNumber }
+    });
+    
+    // If user doesn't exist, register them automatically
+    if (!user) {      // Create user record with admin privileges and premium status
+      user = await sequelize.models.User.create({
+        phoneNumber: targetPhoneNumber,
+        isAdmin: true,
+        isPremium: true  // Admins are automatically premium
+      });
+      
+      await client.reply(
+        message.from,
+        formatter.success('Admin Created', `User ${targetPhoneNumber} has been registered as an admin and premium user.`),
+        message.id
+      );
+      logger.logCommand(senderPhoneNumber, 'admin.makeAdmin', true, 'Created new admin user with premium status');
+    } else {
+      // Update existing user to admin and premium
+      await user.update({ isAdmin: true, isPremium: true });
+      
+      await client.reply(
+        message.from,
+        formatter.success('Admin Update', `User ${targetPhoneNumber} has been updated to admin and premium status.`),
+        message.id
+      );
+      logger.logCommand(senderPhoneNumber, 'admin.makeAdmin', true, 'Updated user to admin');
+    }
+  } catch (error) {
+    logger.logError('admin.makeAdmin', error);
+    await client.reply(
+      message.from,
+      formatter.error('Error making user admin', error.message),
+      message.id
+    );
+    logger.logCommand(message.sender.id.split('@')[0], 'admin.makeAdmin', false, error.message);
+  }
+};
+
 module.exports = {
   isAdmin,
   stats,
   broadcast,
-  restart
+  restart,
+  makeAdmin
 };

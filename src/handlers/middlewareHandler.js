@@ -4,6 +4,7 @@
  */
 const { isUserRegistered } = require('./userHandler');
 const logger = require('../utils/logger');
+const config = require('../config/config');
 
 /**
  * Authentication middleware to check if a user is registered
@@ -13,6 +14,20 @@ const logger = require('../utils/logger');
  */
 const authenticate = async (client, message) => {
   const phoneNumber = message.sender.id.split('@')[0];
+  
+  // Check if user is the owner (from env)
+  if (phoneNumber === config.owner.phoneNumber) {
+    // Create a virtual user object for the owner if they haven't registered yet
+    const ownerUserObj = {
+      phoneNumber,
+      isAdmin: true,
+      isPremium: true,
+      isOwner: true
+    };
+    
+    logger.logAuth(phoneNumber, true, 'Owner access');
+    return ownerUserObj;
+  }
   
   // Check if user is registered
   const user = await isUserRegistered(phoneNumber);

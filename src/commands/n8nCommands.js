@@ -231,23 +231,32 @@ const status = async (client, message) => {
         );
         
         logger.logCommand(phoneNumber, 'n8n.status.group', false, result.message);
-      }
-    } else {      // Personal status
+      }    } else {      // Personal status
       // Get user for premium status
       const user = await isUserRegistered(phoneNumber);
       result = await n8nHandler.getStatusForUser(phoneNumber);
       
+      // Check if user is owner
+      const isUserOwner = n8nHandler.isOwner(phoneNumber);
+      
       if (result.success) {
         const statusInfo = {
           'Status': result.status,
-          'Premium': user && user.isPremium ? 'Yes' : 'No'
+          'Premium': isUserOwner ? 'Yes (Owner)' : (user && user.isPremium ? 'Yes' : 'No')
         };
-        
-        if (result.isActive) {
+          if (result.isActive) {
           statusInfo['Session'] = result.sessionStatus;
-          statusInfo['Daily limit'] = `${result.dailyLimit} requests`;
-          statusInfo['Used today'] = `${result.usageCount} requests`;
-          statusInfo['Remaining'] = `${result.remainingQuota} requests`;
+          
+          // Show unlimited for owner
+          if (isUserOwner) {
+            statusInfo['Daily limit'] = 'Unlimited';
+            statusInfo['Used today'] = `${result.usageCount} requests`;
+            statusInfo['Remaining'] = 'Unlimited';
+          } else {
+            statusInfo['Daily limit'] = `${result.dailyLimit} requests`;
+            statusInfo['Used today'] = `${result.usageCount} requests`;
+            statusInfo['Remaining'] = `${result.remainingQuota} requests`;
+          }
         }
         
         await client.reply(

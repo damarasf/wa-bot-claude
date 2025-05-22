@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 const formatter = require('../utils/formatter');
 const { isUserRegistered } = require('./userHandler');
 const axios = require('axios');
+const config = require('../config/config');
 
 // Configuration from environment variables
 const SESSION_TIMEOUT_MINUTES = parseInt(process.env.N8N_SESSION_TIMEOUT || '60', 10);
@@ -15,6 +16,16 @@ const SESSION_TIMEOUT = SESSION_TIMEOUT_MINUTES * 60 * 1000; // Convert to milli
 // Daily limits from environment variables
 const DEFAULT_DAILY_LIMIT = parseInt(process.env.N8N_DAILY_LIMIT_DEFAULT || '50', 10);
 const PREMIUM_DAILY_LIMIT = parseInt(process.env.N8N_DAILY_LIMIT_PREMIUM || '200', 10);
+const UNLIMITED_LIMIT = 999999; // Effectively unlimited for owner
+
+/**
+ * Check if a user is the owner
+ * @param {string} phoneNumber - User's phone number
+ * @returns {boolean} - True if owner, false otherwise
+ */
+const isOwner = (phoneNumber) => {
+  return phoneNumber === config.owner.phoneNumber;
+};
 
 // Default API url for n8n
 const N8N_API_URL = process.env.N8N_API_URL || 'http://localhost:5678/webhook/whatsapp';
@@ -52,14 +63,19 @@ const activateForUser = async (phoneNumber, silent = false, forceCreate = false)
 
         // Calculate session expiry time (1 hour from now)
     const sessionExpiry = new Date(Date.now() + SESSION_TIMEOUT);
-    
-    // If no record exists, create one
+      // If no record exists, create one
     if (!integration) {
+      // Check if user is owner to set unlimited limit
+      const isUserOwner = isOwner(phoneNumber);
+      const dailyLimit = isUserOwner 
+        ? UNLIMITED_LIMIT 
+        : (user.isPremium ? PREMIUM_DAILY_LIMIT : DEFAULT_DAILY_LIMIT);
+        
       integration = await db.N8nIntegration.create({
         userId: user.id,
         isActive: true,
         sessionExpiry,
-        dailyLimit: user.isPremium ? PREMIUM_DAILY_LIMIT : DEFAULT_DAILY_LIMIT, // Use configured limits based on user's premium status
+        dailyLimit: dailyLimit, // Use unlimited for owner, premium limit for premium users
         usageCount: 0,
         lastResetDate: new Date()
       });
@@ -89,12 +105,17 @@ const activateForUser = async (phoneNumber, silent = false, forceCreate = false)
         };
       }
     }
-    
-    // Update the integration record
+      // Update the integration record
+    // Check if user is owner to set unlimited limit
+    const isUserOwner = isOwner(phoneNumber);
+    const dailyLimit = isUserOwner 
+      ? UNLIMITED_LIMIT 
+      : (user.isPremium ? PREMIUM_DAILY_LIMIT : DEFAULT_DAILY_LIMIT);
+      
     await integration.update({
       isActive: true,
       sessionExpiry,
-      dailyLimit: user.isPremium ? PREMIUM_DAILY_LIMIT : DEFAULT_DAILY_LIMIT // Update limit based on user's current premium status
+      dailyLimit: dailyLimit // Update limit based on owner status or premium status
     });
 
     return {
@@ -312,8 +333,11 @@ const isActiveForUser = async (phoneNumber) => {
         message: 'N8N Integration session has expired. Please activate again.',
         expired: true
       };
-    }    // Check if daily limit reached
-    if (integration.usageCount >= integration.dailyLimit) {
+    }    // For owners, bypass the daily limit check
+    const isUserOwner = isOwner(phoneNumber);
+    
+    // Check if daily limit reached (unless owner)
+    if (!isUserOwner && integration.usageCount >= integration.dailyLimit) {
       // Check if limit should be reset (past midnight)
       const today = new Date();
       const lastReset = new Date(integration.lastResetDate);
@@ -467,9 +491,14 @@ const processMessage = async (client, message, isGroup) => {
       
       userEntity = statusResult.integration;
     }
-    
-    // Double check usage limits for the user
-    if (userEntity.usageCount >= userEntity.dailyLimit) {
+      // Check if the user is the owner - owners have unlimited usage
+    if (isOwner(phoneNumber)) {
+      // Owner has unlimited usage - no need to check limits
+      // Just make sure usage is tracked for statistics
+      logger.log('info', `Owner ${phoneNumber} usage - bypassing limits`);
+    } 
+    // For non-owners, double check usage limits
+    else if (userEntity.usageCount >= userEntity.dailyLimit) {
       // Check if limit should be reset (past midnight)
       const today = new Date();
       const lastReset = new Date(userEntity.lastResetDate);
@@ -542,6 +571,12 @@ const processMessage = async (client, message, isGroup) => {
  */
 const upgradeToPremium = async (phoneNumber, newLimit = PREMIUM_DAILY_LIMIT) => {
   try {
+    // Check if user is the owner (special unlimited limit)
+    const isUserOwner = isOwner(phoneNumber);
+    if (isUserOwner) {
+      newLimit = UNLIMITED_LIMIT;
+    }
+    
     // Check if user is registered
     const user = await isUserRegistered(phoneNumber);
     if (!user) {
@@ -686,15 +721,18 @@ const getStatusForUser = async (phoneNumber) => {
         const timeLeft = Math.round((new Date(integration.sessionExpiry) - now) / (60 * 1000)); // minutes
         sessionStatus = `${timeLeft} minutes remaining`;
       }
-    }
-
-    return {      success: true,
+    }    // Check if user is an owner for special display
+    const isUserOwner = isOwner(phoneNumber);
+    
+    return {      
+      success: true,
       status: isActive ? 'Active' : 'Inactive',
       isActive,
-      isPremium: user.isPremium, // Use user's premium status
-      dailyLimit: integration.dailyLimit,
+      isOwner: isUserOwner,
+      isPremium: isUserOwner ? true : user.isPremium, // Owners are always premium
+      dailyLimit: isUserOwner ? 'Unlimited' : integration.dailyLimit,
       usageCount: integration.usageCount,
-      remainingQuota: integration.dailyLimit - integration.usageCount,
+      remainingQuota: isUserOwner ? 'Unlimited' : (integration.dailyLimit - integration.usageCount),
       sessionStatus: isActive ? sessionStatus : 'N/A',
       lastResetDate: integration.lastResetDate
     };
@@ -792,5 +830,6 @@ module.exports = {
   upgradeToPremium,
   upgradeGroupToPremium,
   getStatusForUser,
-  getStatusForGroup
+  getStatusForGroup,
+  isOwner
 };
