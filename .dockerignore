@@ -1,0 +1,10 @@
+# .dockerignore
+node_modules
+logs
+backups
+.env
+.git
+.gitignore
+.DS_Store
+_IGNORE_wa-bot
+*.log
