@@ -1,0 +1,55 @@
+{
+  "name": "wa-bot-claude",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "prod": "node src/scripts/startBot.js",
+    "setup-db": "node src/config/setupDatabase.js",
+    "reset-db": "node src/config/resetDatabase.js",
+    "migrate": "npx sequelize-cli db:migrate",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo",
+    "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all",
+    "seed": "npx sequelize-cli db:seed:all",
+    "seed:undo": "npx sequelize-cli db:seed:undo:all",
+    "test:db": "node src/scripts/testDbConnection.js",
+    "test:reminder": "node src/test/reminderTest.js",
+    "test:note": "node src/test/noteTest.js",
+    "test:weather": "node src/test/weatherTest.js",
+    "test:all": "npm run test:db && npm run test:reminder && npm run test:note && npm run test:weather",
+    "lint": "echo \"No linter configured\"",
+    "postinstall": "echo \"WhatsApp bot has been installed successfully! Run 'npm run setup-db' to set up the database.\"",
+    "run-migrations": "node src/scripts/runMigrations.js",
+    "setup-and-migrate": "npm run setup-db && npm run run-migrations --seed",
+    "backup": "node src/scripts/backupDatabase.js"
+  },
+  "keywords": ["whatsapp", "bot", "n8n", "ai", "claude", "chatbot", "postgres"],
+  "author": "damarasf",
+  "license": "ISC",
+  "description": "WhatsApp bot with n8n integration for AI chat capabilities",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/damarasf/wa-bot-claude.git"
+  },
+  "bugs": {
+    "url": "https://github.com/damarasf/wa-bot-claude/issues"
+  },
+  "homepage": "https://github.com/damarasf/wa-bot-claude#readme",
+  "dependencies": {
+    "@open-wa/wa-automate": "^4.76.0",
+    "axios": "^1.6.2",
+    "dotenv": "^16.5.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "moment": "^2.30.1",
+    "pg": "^8.16.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.7",
+    "uuid": "^11.1.0",
+    "ytdl-core": "^4.11.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "sequelize-cli": "^6.6.3"
+  }
+}
