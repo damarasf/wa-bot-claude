@@ -15,6 +15,7 @@
 - Set environment variables in the EasyPanel UI (copy from `.env.example`).
 - Make sure to add a **PostgreSQL service** in EasyPanel and link it to your app.
 - Set the `CHROME_PATH` env var to `/usr/bin/chromium-browser`.
+- **IMPORTANT**: Set `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true` to use the system's Chromium.
 - Expose port `3000` (or your custom port).
 - For persistent data, mount volumes for `/app/logs`, `/app/backups`, `/app/_IGNORE_wa-bot`, and `/app/wa-bot.data.json` if needed.
 

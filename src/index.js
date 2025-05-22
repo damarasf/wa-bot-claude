@@ -595,7 +595,9 @@ const start = async () => {
       '--disable-offline-load-stale-cache',
       '--disk-cache-size=0'
     ],
-    chromePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser'
+    // Explicitly set the Chrome path from environment variables
+    // This is crucial for Docker deployments to work correctly
+    executablePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser'
   };
 
   // Create and start the WhatsApp client
