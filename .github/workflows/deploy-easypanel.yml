@@ -1,0 +1,41 @@
+# GitHub Actions workflow for EasyPanel Docker deployment
+# Adjust branch, secrets, and build context as needed
+
+name: Deploy to EasyPanel (Docker)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.EASYPANEL_REGISTRY_URL }}
+          username: ${{ secrets.EASYPANEL_REGISTRY_USER }}
+          password: ${{ secrets.EASYPANEL_REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.EASYPANEL_REGISTRY_URL }}/${{ secrets.EASYPANEL_IMAGE_NAME }}:latest
+
+      # Optionally, trigger EasyPanel redeploy via webhook
+      - name: Trigger EasyPanel redeploy
+        if: ${{ success() && secrets.EASYPANEL_WEBHOOK_URL != '' }}
+        run: |
+          curl -X POST ${{ secrets.EASYPANEL_WEBHOOK_URL }}
