@@ -517,20 +517,23 @@ const processMessage = async (client, message, isGroup) => {
         };
       }
     }
-      // Send the message to n8n webhook
+    
+    // Send the message to n8n webhook
     const response = await axios.post(N8N_API_URL, {
       message: body,
       from: from,
       phoneNumber: phoneNumber,
       messageId: id,
       isGroup: isGroup,
-      groupId: isGroup ? from : null,
-      apiKey: N8N_API_KEY // For security
+      groupId: isGroup ? from : null
     }, {
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'apiKey': N8N_API_KEY
       }
-    });    // Increment user's usage count (always count against the user, not the group)
+    });    
+    
+    // Increment user's usage count (always count against the user, not the group)
     await userEntity.increment('usageCount');
     
     // Reload the entity to get the updated count
