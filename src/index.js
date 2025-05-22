@@ -595,7 +595,7 @@ const start = async () => {
       '--disable-offline-load-stale-cache',
       '--disk-cache-size=0'
     ],
-    chromePath: process.env.CHROME_PATH || '/usr/bin/chromium-browser'
+    chromePath: process.env.CHROME_PATH || '/usr/bin/chromium'
   };
 
   // Create and start the WhatsApp client
