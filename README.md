@@ -6,13 +6,13 @@ An advanced WhatsApp bot built with Node.js and open-wa/wa-automate with Postgre
 
 ## Features
 
-- User registration system
+- User registration system with owner, admin, and premium roles
 - PostgreSQL database integration
 - Environment variable configuration
 - UUID-based user identification
 - Advanced command handling system
 - Interactive chat utilities
-- Admin commands with broadcast functionality
+- Owner and admin command privileges with broadcast functionality
 - Formatted messages with custom styling
 - Command authentication middleware
 - Weather information command
@@ -20,6 +20,7 @@ An advanced WhatsApp bot built with Node.js and open-wa/wa-automate with Postgre
 - Note-taking functionality with search capability
 - Rate limiting to prevent spam
 - N8N Integration for natural language processing and chatbot functionality
+- Role-based access control and usage limits
 
 ## Prerequisites
 
@@ -61,9 +62,11 @@ HEADLESS=true
 # Set to false for debugging and seeing the browser
 DEBUG_MODE=false
 
-# Admin Configuration
-# Comma-separated list of admin phone numbers (no spaces)
-ADMIN_NUMBERS=628xxxxxxxxxx
+# Owner and Admin Configuration
+# Owner phone number (has all privileges and can set others as admin)
+OWNER_PHONE_NUMBER=628xxxxxxxxxx
+# Admin password for admin registration
+ADMIN_PASSWORD=your_secure_admin_password
 
 # Weather API Configuration
 WEATHER_API_KEY=your_openweathermap_api_key
@@ -143,7 +146,7 @@ When the bot starts for the first time, it will display a QR code in the termina
 ### Available Commands
 
 #### General Commands (No Registration Required)
-- `{prefix}register` - Register a new user (use `{prefix}register admin [password]` for admin registration)
+- `{prefix}register` - Register a new user (use `{prefix}register admin [password]` for admin registration - admins automatically get premium status)
 - `{prefix}status` - Check your registration status
 - `{prefix}help` - Show help menu
 
@@ -178,6 +181,8 @@ When the bot starts for the first time, it will display a QR code in the termina
 #### Premium Features
 - **Individual Premium Status**: Premium status is assigned at the user level, not to groups
 - **Higher N8N Usage Limits**: Premium users get higher daily usage limits (default: 200 vs. 50)
+- **Automatic Premium for Admins**: Users with admin status automatically receive premium benefits
+- **Unlimited Usage for Owner**: The owner has unlimited usage for N8N and other limited features
 - **Customizable Limits**: Admins can set custom limits for premium users
 - **Group Support**: In groups, each user uses their individual limit, not a group-wide limit
 - **Usage Tracking**: All usage is tracked per-user, even in group chats
@@ -188,6 +193,12 @@ When the bot starts for the first time, it will display a QR code in the termina
 - `{prefix}admin broadcast [message]` - Send a message to all registered users
 - `{prefix}admin restart` - Restart the bot
 - `{prefix}n8n upgrade [phone/group] [limit]` - Upgrade a user or group activator to premium N8N integration with optional custom limit
+
+#### Owner Commands
+- `{prefix}admin makeadmin [phone]` - Make a user an admin (owner only)
+- **Access to All Commands**: The owner can use all commands, including admin commands
+- **No Registration Required**: The owner can use commands without registering first
+- **Unlimited Usage**: The owner has no daily usage limits
 
 > Note: The command prefixes are configurable in the `.env` file using the `COMMAND_PREFIX` and `ALTERNATE_PREFIX` settings
 
